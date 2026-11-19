@@ -1,0 +1,469 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Cardápio Digital</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+    :root {
+    --cor: #e63946;
+    --cor-escura: #b52b37;
+    --fundo: #f6f6f7;
+    --card: #ffffff;
+    --chip: #efeff2;
+    --texto: #1d1d1f;
+    --suave: #6b6b72;
+    --borda: #e4e4e8;
+    --verde: #1faa59;
+    --erro: #d62839;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --fundo: #131316; --card: #1d1d22; --chip: #2a2a31; --texto: #f1f1f3; --suave: #a0a0a9; --borda: #33333b; --erro: #ff7b82; color-scheme: dark; }
+  }
+  :root[data-theme="dark"] { --fundo: #131316; --card: #1d1d22; --chip: #2a2a31; --texto: #f1f1f3; --suave: #a0a0a9; --borda: #33333b; --erro: #ff7b82; color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--fundo); color: var(--texto); padding-bottom: 90px; }
+  button, input, select, textarea { font: inherit; }
+  button { cursor: pointer; }
+
+  header { background: var(--cor); color: #fff; padding: 22px max(16px, env(safe-area-inset-right, 0px)) 28px max(16px, env(safe-area-inset-left, 0px)); text-align: center; }
+  header .logo { font-size: 44px; line-height: 1; margin-bottom: 8px; }
+  header h1 { font-size: 22px; font-weight: 700; }
+  header p { opacity: .92; font-size: 14px; margin-top: 4px; }
+  .status { display: inline-block; margin-top: 12px; padding: 5px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; background: rgba(255,255,255,.2); }
+  .status.aberto::before { content: "● "; color: #9dffc3; }
+  .status.fechado::before { content: "● "; color: #ffd0d0; }
+
+  .wrap { max-width: 760px; margin: 0 auto; padding-block: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .busca { margin: -18px 0 12px; }
+  .busca input { width: 100%; padding: 13px 16px; border-radius: 12px; border: 1px solid var(--borda); background: var(--card); box-shadow: 0 2px 8px rgba(0,0,0,.08); font-size: 15px; }
+
+  .cats { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 12px; position: sticky; top: env(safe-area-inset-top, 0px); background: var(--fundo); z-index: 5; scrollbar-width: none; }
+  .cats::-webkit-scrollbar { display: none; }
+  .chip { flex: none; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--borda); background: var(--card); font-size: 14px; color: var(--texto); }
+  .chip.ativo { background: var(--cor); border-color: var(--cor); color: #fff; font-weight: 600; }
+
+  h2.cat-titulo { font-size: 17px; margin: 18px 0 10px; }
+  .item { display: flex; gap: 12px; background: var(--card); border: 1px solid var(--borda); border-radius: 14px; padding: 12px; margin-bottom: 10px; }
+  .item .foto { flex: none; width: 84px; height: 84px; border-radius: 10px; background: var(--chip); display: flex; align-items: center; justify-content: center; font-size: 38px; overflow: hidden; }
+  .item .foto img { width: 100%; height: 100%; object-fit: cover; }
+  .item .info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .item .nome { font-weight: 600; font-size: 15px; }
+  .item .desc { color: var(--suave); font-size: 13px; margin-top: 2px; flex: 1; }
+  .item .linha { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; gap: 8px; }
+  .preco { font-weight: 700; color: var(--cor-escura); }
+  .esgotado { font-size: 12px; font-weight: 700; color: var(--suave); background: var(--chip); padding: 5px 10px; border-radius: 8px; }
+  .btn-add { background: var(--cor); color: #fff; border: 0; padding: 8px 16px; border-radius: 10px; font-weight: 600; font-size: 14px; }
+  .qtd { display: flex; align-items: center; gap: 4px; }
+  .qtd button { width: 32px; height: 32px; border-radius: 9px; border: 1px solid var(--borda); background: var(--card); font-size: 18px; line-height: 1; }
+  .qtd button.mais { background: var(--cor); border-color: var(--cor); color: #fff; }
+  .qtd span { min-width: 26px; text-align: center; font-weight: 700; }
+  .vazio { text-align: center; color: var(--suave); padding: 40px 10px; }
+
+  .barra { position: fixed; left: 0; right: 0; bottom: 0; padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); background: linear-gradient(transparent, var(--fundo) 30%); z-index: 10; display: none; }
+  .barra.visivel { display: block; }
+  .barra button { width: 100%; max-width: 760px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; background: var(--verde); color: #fff; border: 0; border-radius: 14px; padding: 15px 18px; font-weight: 700; font-size: 16px; box-shadow: 0 6px 18px rgba(31,170,89,.4); }
+
+  .fundo-modal { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 20; display: none; align-items: flex-end; justify-content: center; }
+  .fundo-modal.aberto { display: flex; }
+  .modal { background: var(--card); width: 100%; max-width: 560px; max-height: 92vh; overflow-y: auto; border-radius: 20px 20px 0 0; padding: 18px max(16px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+  .modal-topo { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .modal-topo h3 { font-size: 18px; }
+  .fechar { background: var(--chip); border: 0; width: 34px; height: 34px; border-radius: 50%; font-size: 18px; }
+  .linha-carrinho { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--borda); }
+  .linha-carrinho .n { font-weight: 600; font-size: 14px; }
+  .linha-carrinho .p { color: var(--suave); font-size: 13px; }
+  .totais { margin: 12px 0; font-size: 14px; }
+  .totais div { display: flex; justify-content: space-between; padding: 3px 0; }
+  .totais .total { font-weight: 800; font-size: 18px; border-top: 1px solid var(--borda); margin-top: 6px; padding-top: 8px; }
+  label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 5px; }
+  .campo { width: 100%; padding: 12px; border: 1px solid var(--borda); border-radius: 10px; background: var(--card); font-size: 15px; }
+  .opcoes { display: flex; gap: 8px; }
+  .opcoes label { flex: 1; margin: 0; }
+  .opcoes input { display: none; }
+  .opcoes span { display: block; text-align: center; padding: 11px 6px; border: 1px solid var(--borda); border-radius: 10px; font-weight: 600; font-size: 14px; }
+  .opcoes input:checked + span { background: var(--cor); border-color: var(--cor); color: #fff; }
+  .erro { color: var(--erro); font-size: 13px; margin-top: 8px; min-height: 18px; }
+  .btn-enviar { width: 100%; margin-top: 10px; background: var(--verde); color: #fff; border: 0; border-radius: 12px; padding: 15px; font-weight: 700; font-size: 16px; }
+  .btn-limpar { width: 100%; margin-top: 8px; background: transparent; color: var(--suave); border: 0; padding: 8px; font-size: 13px; text-decoration: underline; }
+
+  footer { text-align: center; color: var(--suave); font-size: 12px; padding: 24px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px)); }
+  footer a { color: inherit; }
+  [hidden] { display: none !important; }
+
+  body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--fundo); }
+  .campo, .qtd button, .chip, .fechar { color: var(--texto); }
+  .qtd button.mais { color: #fff; }
+  .btn-enviar { display: block; text-align: center; text-decoration: none; }
+  :focus-visible { outline: 2px solid var(--cor); outline-offset: 2px; }
+</style>
+
+
+<header>
+  <div class="logo" id="logo"></div>
+  <h1 id="nome"></h1>
+  <p id="slogan"></p>
+  <div class="status" id="status"></div>
+</header>
+
+<main class="wrap">
+  <div class="busca"><input id="busca" type="search" placeholder="Buscar no cardápio..." autocomplete="off"></div>
+  <nav class="cats" id="cats"></nav>
+  <section id="lista"></section>
+</main>
+
+<footer id="rodape"></footer>
+
+<div class="barra" id="barra">
+  <button id="abrir-carrinho"><span id="barra-qtd"></span><span>Ver pedido</span><span id="barra-total"></span></button>
+</div>
+
+<div class="fundo-modal" id="fundo">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Seu pedido">
+    <div class="modal-topo"><h3>Seu pedido</h3><button class="fechar" id="fechar" aria-label="Fechar">✕</button></div>
+    <div id="itens-carrinho"></div>
+
+    <div class="totais">
+      <div><span>Subtotal</span><span id="t-sub"></span></div>
+      <div id="linha-taxa"><span>Taxa de entrega</span><span id="t-taxa"></span></div>
+      <div class="total"><span>Total</span><span id="t-total"></span></div>
+    </div>
+
+    <label for="cli-nome">Seu nome</label>
+    <input class="campo" id="cli-nome" autocomplete="name" placeholder="Como podemos te chamar?">
+
+    <label>Como prefere receber?</label>
+    <div class="opcoes" id="opc-entrega">
+      <label><input type="radio" name="entrega" value="entrega" checked><span>🛵 Entrega</span></label>
+      <label><input type="radio" name="entrega" value="retirada"><span>🏪 Retirada</span></label>
+    </div>
+
+    <div id="bloco-endereco">
+      <label for="cli-end">Endereço completo</label>
+      <input class="campo" id="cli-end" autocomplete="street-address" placeholder="Rua, número, bairro, referência">
+    </div>
+
+    <label for="cli-pag">Forma de pagamento</label>
+    <select class="campo" id="cli-pag"></select>
+
+    <div id="bloco-troco" hidden>
+      <label for="cli-troco">Troco para quanto?</label>
+      <input class="campo" id="cli-troco" inputmode="decimal" placeholder="Ex.: 50">
+    </div>
+
+    <label for="cli-obs">Observações (opcional)</label>
+    <textarea class="campo" id="cli-obs" rows="2" placeholder="Ex.: sem cebola, tocar o interfone..."></textarea>
+
+    <div class="erro" id="erro"></div>
+    <a class="btn-enviar" id="enviar" href="https://wa.me/" target="_blank" rel="noopener">Enviar pedido pelo WhatsApp</a>
+    <button class="btn-limpar" id="limpar">Esvaziar carrinho</button>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   CONFIGURAÇÃO  —  é só esta parte que você edita para cada cliente
+   ===================================================================== */
+const CONFIG = {
+  nome: "Lanchonete Exemplo",
+  slogan: "Lanches, porções e bebidas geladas",
+  logo: "🍔",                    // um emoji OU o endereço de uma imagem (ex.: "logo.png")
+  whatsapp: "5571999999999",     // só números, com 55 + DDD + número
+  corPrincipal: "#e63946",
+  moeda: "BRL",
+
+  entrega: {
+    ativa: true,
+    taxa: 5.00,                  // 0 para entrega grátis
+    pedidoMinimo: 15.00,         // 0 para sem mínimo
+    gratisAcimaDe: 60.00         // 0 para desativar
+  },
+  retirada: { ativa: true },
+
+  pagamentos: ["Pix", "Dinheiro", "Cartão de crédito", "Cartão de débito"],
+  pixChave: "",                  // opcional: chave Pix mostrada no pedido
+
+  /* Horário de funcionamento. 0=domingo ... 6=sábado. Use null para fechado no dia.
+     Deixe "horarios: null" para não mostrar aberto/fechado. */
+  horarios: {
+    0: ["18:00", "23:00"],
+    1: null,
+    2: ["18:00", "23:00"],
+    3: ["18:00", "23:00"],
+    4: ["18:00", "23:00"],
+    5: ["18:00", "23:59"],
+    6: ["18:00", "23:59"]
+  },
+  aceitarPedidoFechado: true,    // false bloqueia o envio fora do horário
+
+  rodape: "Feito com ❤️ por GDA Sites",
+
+  categorias: ["Lanches", "Porções", "Bebidas", "Sobremesas"],
+
+  /* foto: emoji OU endereço de imagem. esgotado: true tira o botão de adicionar. */
+  produtos: [
+    { id: 1,  cat: "Lanches",    nome: "X-Burger",        desc: "Pão, hambúrguer 120g, queijo e salada",           preco: 18.00, foto: "🍔" },
+    { id: 2,  cat: "Lanches",    nome: "X-Bacon",         desc: "Hambúrguer, bacon crocante, queijo e molho",       preco: 24.00, foto: "🥓" },
+    { id: 3,  cat: "Lanches",    nome: "X-Tudo",          desc: "Hambúrguer, ovo, presunto, queijo, bacon e salada", preco: 29.00, foto: "🍔" },
+    { id: 4,  cat: "Lanches",    nome: "Hot Dog Completo", desc: "Salsicha, purê, milho, batata palha e molho",     preco: 14.00, foto: "🌭" },
+    { id: 5,  cat: "Porções",    nome: "Batata Frita",    desc: "Porção média, serve 2 pessoas",                    preco: 22.00, foto: "🍟" },
+    { id: 6,  cat: "Porções",    nome: "Calabresa Acebolada", desc: "Calabresa fatiada com cebola e farofa",        preco: 32.00, foto: "🍖" },
+    { id: 7,  cat: "Bebidas",    nome: "Refrigerante Lata", desc: "350ml, escolha o sabor nas observações",         preco: 6.00,  foto: "🥤" },
+    { id: 8,  cat: "Bebidas",    nome: "Suco Natural",    desc: "Laranja, maracujá ou acerola, 400ml",              preco: 9.00,  foto: "🍹" },
+    { id: 9,  cat: "Bebidas",    nome: "Água Mineral",    desc: "500ml sem gás",                                    preco: 3.00,  foto: "💧" },
+    { id: 10, cat: "Sobremesas", nome: "Pudim",           desc: "Fatia caseira com calda de caramelo",              preco: 8.00,  foto: "🍮", esgotado: true },
+    { id: 11, cat: "Sobremesas", nome: "Brownie",         desc: "Com sorvete de creme",                             preco: 12.00, foto: "🍫" }
+  ]
+};
+/* ===================== FIM DA CONFIGURAÇÃO ===================== */
+
+
+(function () {
+  "use strict";
+
+  var $ = function (id) { return document.getElementById(id); };
+  var fmt = new Intl.NumberFormat("pt-BR", { style: "currency", currency: CONFIG.moeda });
+  var brl = function (v) { return fmt.format(v); };
+  var esc = function (s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  };
+  var ehImagem = function (s) { return /[\/.]/.test(s) && /\.(png|jpe?g|webp|gif|svg)(\?|$)/i.test(s) || /^https?:\/\//i.test(s); };
+  var midia = function (s, alt) { return ehImagem(s) ? '<img src="' + esc(s) + '" alt="' + esc(alt) + '" loading="lazy">' : esc(s); };
+
+  var STORAGE_KEY = "catalogo:" + CONFIG.whatsapp;
+  var carrinho = {};       // { idProduto: quantidade }
+  var categoriaAtiva = "Todos";
+  var termo = "";
+
+  /* ---------- persistência (pode falhar em modo privado) ---------- */
+  function salvar() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(carrinho)); } catch (e) {} }
+  function carregar() {
+    try {
+      var bruto = localStorage.getItem(STORAGE_KEY);
+      if (!bruto) return;
+      var dados = JSON.parse(bruto), validos = {};
+      CONFIG.produtos.forEach(function (p) {
+        var q = parseInt(dados[p.id], 10);
+        if (q > 0 && !p.esgotado) validos[p.id] = q;
+      });
+      carrinho = validos;
+    } catch (e) { carrinho = {}; }
+  }
+
+  /* ---------- horário ---------- */
+  function paraMin(hhmm) { var p = hhmm.split(":"); return parseInt(p[0], 10) * 60 + parseInt(p[1], 10); }
+  function estaAberto() {
+    if (!CONFIG.horarios) return null;
+    var agora = new Date(), faixa = CONFIG.horarios[agora.getDay()];
+    if (!faixa) return false;
+    var m = agora.getHours() * 60 + agora.getMinutes();
+    return m >= paraMin(faixa[0]) && m <= paraMin(faixa[1]);
+  }
+  function textoHorarioHoje() {
+    var faixa = CONFIG.horarios && CONFIG.horarios[new Date().getDay()];
+    return faixa ? faixa[0] + " às " + faixa[1] : "";
+  }
+  function pintarStatus() {
+    var el = $("status"), aberto = estaAberto();
+    if (aberto === null) { el.hidden = true; return; }
+    el.className = "status " + (aberto ? "aberto" : "fechado");
+    var h = textoHorarioHoje();
+    el.textContent = aberto ? "Aberto agora" + (h ? " · hoje " + h : "") : (h ? "Fechado · hoje abre " + h.split(" ")[0] : "Fechado hoje");
+  }
+
+  /* ---------- cálculo ---------- */
+  function itensDoCarrinho() {
+    return CONFIG.produtos.filter(function (p) { return carrinho[p.id] > 0; })
+      .map(function (p) { return { p: p, q: carrinho[p.id] }; });
+  }
+  function subtotal() {
+    return itensDoCarrinho().reduce(function (s, i) { return s + i.p.preco * i.q; }, 0);
+  }
+  function qtdTotal() {
+    return itensDoCarrinho().reduce(function (s, i) { return s + i.q; }, 0);
+  }
+  function modoEntrega() {
+    var sel = document.querySelector('input[name="entrega"]:checked');
+    return sel ? sel.value : "entrega";
+  }
+  function taxaAtual() {
+    var e = CONFIG.entrega;
+    if (modoEntrega() !== "entrega" || !e.ativa) return 0;
+    if (e.gratisAcimaDe > 0 && subtotal() >= e.gratisAcimaDe) return 0;
+    return e.taxa || 0;
+  }
+
+  /* ---------- catálogo ---------- */
+  function mudar(id, delta) {
+    var p = CONFIG.produtos.find(function (x) { return x.id === id; });
+    if (!p || p.esgotado) return;
+    var q = (carrinho[id] || 0) + delta;
+    if (q <= 0) delete carrinho[id]; else carrinho[id] = Math.min(q, 99);
+    salvar();
+    desenharLista();
+    atualizarBarra();
+    if ($("fundo").classList.contains("aberto")) desenharCarrinho();
+  }
+
+  function desenharCats() {
+    var nomes = ["Todos"].concat(CONFIG.categorias);
+    $("cats").innerHTML = nomes.map(function (c) {
+      return '<button class="chip' + (c === categoriaAtiva ? " ativo" : "") + '" data-cat="' + esc(c) + '">' + esc(c) + "</button>";
+    }).join("");
+  }
+
+  function cartaoProduto(p) {
+    var q = carrinho[p.id] || 0, acao;
+    if (p.esgotado) acao = '<span class="esgotado">Esgotado</span>';
+    else if (q === 0) acao = '<button class="btn-add" data-add="' + p.id + '">Adicionar</button>';
+    else acao = '<div class="qtd"><button data-menos="' + p.id + '" aria-label="Diminuir">−</button><span>' + q + '</span><button class="mais" data-mais="' + p.id + '" aria-label="Aumentar">+</button></div>';
+    return '<article class="item"><div class="foto">' + midia(p.foto || "🍽️", p.nome) + '</div>' +
+      '<div class="info"><div class="nome">' + esc(p.nome) + '</div><div class="desc">' + esc(p.desc || "") + '</div>' +
+      '<div class="linha"><span class="preco">' + brl(p.preco) + '</span>' + acao + '</div></div></article>';
+  }
+
+  function desenharLista() {
+    var t = termo.trim().toLowerCase(), html = "", achou = false;
+    CONFIG.categorias.forEach(function (c) {
+      if (categoriaAtiva !== "Todos" && categoriaAtiva !== c) return;
+      var itens = CONFIG.produtos.filter(function (p) {
+        return p.cat === c && (!t || (p.nome + " " + (p.desc || "")).toLowerCase().indexOf(t) !== -1);
+      });
+      if (!itens.length) return;
+      achou = true;
+      html += '<h2 class="cat-titulo">' + esc(c) + "</h2>" + itens.map(cartaoProduto).join("");
+    });
+    $("lista").innerHTML = achou ? html : '<div class="vazio">Nenhum item encontrado.</div>';
+  }
+
+  function atualizarBarra() {
+    var q = qtdTotal();
+    $("barra").classList.toggle("visivel", q > 0);
+    $("barra-qtd").textContent = q + (q === 1 ? " item" : " itens");
+    $("barra-total").textContent = brl(subtotal());
+  }
+
+  /* ---------- carrinho ---------- */
+  function desenharCarrinho() {
+    var itens = itensDoCarrinho();
+    if (!itens.length) { fecharCarrinho(); return; }
+    $("itens-carrinho").innerHTML = itens.map(function (i) {
+      return '<div class="linha-carrinho"><div><div class="n">' + esc(i.p.nome) + '</div><div class="p">' + brl(i.p.preco) + ' cada · ' + brl(i.p.preco * i.q) + '</div></div>' +
+        '<div class="qtd"><button data-menos="' + i.p.id + '" aria-label="Diminuir">−</button><span>' + i.q + '</span><button class="mais" data-mais="' + i.p.id + '" aria-label="Aumentar">+</button></div></div>';
+    }).join("");
+    var sub = subtotal(), taxa = taxaAtual();
+    $("t-sub").textContent = brl(sub);
+    $("linha-taxa").hidden = modoEntrega() !== "entrega" || !CONFIG.entrega.ativa;
+    $("t-taxa").textContent = taxa > 0 ? brl(taxa) : "Grátis";
+    $("t-total").textContent = brl(sub + taxa);
+  }
+  function abrirCarrinho() { desenharCarrinho(); $("erro").textContent = ""; $("fundo").classList.add("aberto"); }
+  function fecharCarrinho() { $("fundo").classList.remove("aberto"); }
+
+  function ajustarFormulario() {
+    var entrega = modoEntrega() === "entrega";
+    $("bloco-endereco").hidden = !entrega;
+    $("bloco-troco").hidden = $("cli-pag").value !== "Dinheiro";
+    desenharCarrinho();
+  }
+
+  /* ---------- envio ---------- */
+  function montarMensagem() {
+    var itens = itensDoCarrinho(), entrega = modoEntrega() === "entrega";
+    var sub = subtotal(), taxa = taxaAtual(), total = sub + taxa;
+    var L = [];
+    L.push("*Novo pedido — " + CONFIG.nome + "*");
+    L.push("");
+    L.push("*Cliente:* " + $("cli-nome").value.trim());
+    L.push("*Recebimento:* " + (entrega ? "Entrega" : "Retirada no local"));
+    if (entrega) L.push("*Endereço:* " + $("cli-end").value.trim());
+    L.push("");
+    L.push("*Itens:*");
+    itens.forEach(function (i) { L.push(i.q + "x " + i.p.nome + " — " + brl(i.p.preco * i.q)); });
+    L.push("");
+    L.push("Subtotal: " + brl(sub));
+    if (entrega) L.push("Taxa de entrega: " + (taxa > 0 ? brl(taxa) : "Grátis"));
+    L.push("*Total: " + brl(total) + "*");
+    L.push("");
+    var pag = $("cli-pag").value;
+    L.push("*Pagamento:* " + pag);
+    if (pag === "Dinheiro" && $("cli-troco").value.trim()) L.push("*Troco para:* " + $("cli-troco").value.trim());
+    if (pag === "Pix" && CONFIG.pixChave) L.push("*Chave Pix:* " + CONFIG.pixChave);
+    var obs = $("cli-obs").value.trim();
+    if (obs) { L.push(""); L.push("*Observações:* " + obs); }
+    return L.join("\n");
+  }
+
+  function enviar(ev) {
+    var erro = $("erro"), entrega = modoEntrega() === "entrega";
+    function falha(txt, campo) { ev.preventDefault(); erro.textContent = txt; if (campo) $(campo).focus(); }
+    erro.textContent = "";
+    if (!qtdTotal()) return falha("Seu carrinho está vazio.");
+    if (!$("cli-nome").value.trim()) return falha("Informe seu nome.", "cli-nome");
+    if (entrega && !$("cli-end").value.trim()) return falha("Informe o endereço para entrega.", "cli-end");
+    if (entrega && CONFIG.entrega.pedidoMinimo > 0 && subtotal() < CONFIG.entrega.pedidoMinimo) {
+      return falha("Pedido mínimo para entrega: " + brl(CONFIG.entrega.pedidoMinimo) + ".");
+    }
+    if (estaAberto() === false && !CONFIG.aceitarPedidoFechado) {
+      return falha("Estamos fechados agora. Hoje: " + (textoHorarioHoje() || "sem atendimento") + ".");
+    }
+    $("enviar").href = "https://wa.me/" + CONFIG.whatsapp.replace(/\D/g, "") + "?text=" + encodeURIComponent(montarMensagem());
+  }
+
+  /* ---------- inicialização ---------- */
+  function iniciar() {
+    document.title = CONFIG.nome + " · Cardápio";
+    document.documentElement.style.setProperty("--cor", CONFIG.corPrincipal);
+    document.documentElement.style.setProperty("--cor-escura", CONFIG.corPrincipal);
+    $("logo").innerHTML = midia(CONFIG.logo, CONFIG.nome);
+    if (ehImagem(CONFIG.logo)) { var im = $("logo").querySelector("img"); im.style.cssText = "width:64px;height:64px;border-radius:50%;object-fit:cover;"; }
+    $("nome").textContent = CONFIG.nome;
+    $("slogan").textContent = CONFIG.slogan;
+    $("rodape").textContent = CONFIG.rodape || "";
+
+    // modos de recebimento
+    var opc = document.querySelectorAll('input[name="entrega"]');
+    if (!CONFIG.entrega.ativa || !CONFIG.retirada.ativa) {
+      $("opc-entrega").hidden = true;
+      var forcado = CONFIG.entrega.ativa ? "entrega" : "retirada";
+      opc.forEach(function (o) { o.checked = o.value === forcado; });
+    }
+
+    // pagamentos
+    $("cli-pag").innerHTML = CONFIG.pagamentos.map(function (p) { return "<option>" + esc(p) + "</option>"; }).join("");
+
+    carregar();
+    pintarStatus();
+    setInterval(pintarStatus, 60000);
+    desenharCats();
+    desenharLista();
+    atualizarBarra();
+    ajustarFormulario();
+
+    // eventos
+    $("busca").addEventListener("input", function (e) { termo = e.target.value; desenharLista(); });
+    $("cats").addEventListener("click", function (e) {
+      var b = e.target.closest("[data-cat]"); if (!b) return;
+      categoriaAtiva = b.getAttribute("data-cat"); desenharCats(); desenharLista();
+    });
+    document.addEventListener("click", function (e) {
+      var a = e.target.closest("[data-add],[data-mais],[data-menos]"); if (!a) return;
+      if (a.hasAttribute("data-add")) mudar(parseInt(a.getAttribute("data-add"), 10), 1);
+      else if (a.hasAttribute("data-mais")) mudar(parseInt(a.getAttribute("data-mais"), 10), 1);
+      else mudar(parseInt(a.getAttribute("data-menos"), 10), -1);
+    });
+    $("abrir-carrinho").addEventListener("click", abrirCarrinho);
+    $("fechar").addEventListener("click", fecharCarrinho);
+    $("fundo").addEventListener("click", function (e) { if (e.target === $("fundo")) fecharCarrinho(); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") fecharCarrinho(); });
+    $("opc-entrega").addEventListener("change", ajustarFormulario);
+    $("cli-pag").addEventListener("change", ajustarFormulario);
+    $("enviar").addEventListener("click", enviar);
+    $("limpar").addEventListener("click", function () { carrinho = {}; salvar(); desenharLista(); atualizarBarra(); fecharCarrinho(); });
+  }
+
+  iniciar();
+})();
+</script>
+
+</body></html>
