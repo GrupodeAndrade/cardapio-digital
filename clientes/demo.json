@@ -1,0 +1,160 @@
+{
+  "nome": "Lanchonete Exemplo",
+  "slogan": "Lanches, porções e bebidas geladas",
+  "logo": "🍔",
+  "whatsapp": "5571999999999",
+  "corPrincipal": "#e63946",
+  "moeda": "BRL",
+  "entrega": {
+    "ativa": true,
+    "pedidoMinimo": 15,
+    "zonas": [
+      {
+        "nome": "Bairros comuns",
+        "taxa": 5,
+        "gratisAcimaDe": 60
+      },
+      {
+        "nome": "Orla",
+        "aCombinar": true,
+        "descricao": "O frete é calculado pelo comércio conforme a distância e informado no WhatsApp."
+      }
+    ]
+  },
+  "retirada": {
+    "ativa": true
+  },
+  "pagamentos": [
+    "Pix",
+    "Dinheiro",
+    "Cartão de crédito",
+    "Cartão de débito"
+  ],
+  "pixChave": "",
+  "horarios": {
+    "0": [
+      "18:00",
+      "23:00"
+    ],
+    "1": null,
+    "2": [
+      "18:00",
+      "23:00"
+    ],
+    "3": [
+      "18:00",
+      "23:00"
+    ],
+    "4": [
+      "18:00",
+      "23:00"
+    ],
+    "5": [
+      "18:00",
+      "23:59"
+    ],
+    "6": [
+      "18:00",
+      "23:59"
+    ]
+  },
+  "aceitarPedidoFechado": true,
+  "rodape": "Feito com ❤️ por GDA Sites",
+  "categorias": [
+    "Lanches",
+    "Porções",
+    "Bebidas",
+    "Sobremesas"
+  ],
+  "produtos": [
+    {
+      "id": 1,
+      "cat": "Lanches",
+      "nome": "X-Burger",
+      "desc": "Pão, hambúrguer 120g, queijo e salada",
+      "preco": 18,
+      "foto": "🍔"
+    },
+    {
+      "id": 2,
+      "cat": "Lanches",
+      "nome": "X-Bacon",
+      "desc": "Hambúrguer, bacon crocante, queijo e molho",
+      "preco": 24,
+      "foto": "🥓"
+    },
+    {
+      "id": 3,
+      "cat": "Lanches",
+      "nome": "X-Tudo",
+      "desc": "Hambúrguer, ovo, presunto, queijo, bacon e salada",
+      "preco": 29,
+      "foto": "🍔"
+    },
+    {
+      "id": 4,
+      "cat": "Lanches",
+      "nome": "Hot Dog Completo",
+      "desc": "Salsicha, purê, milho, batata palha e molho",
+      "preco": 14,
+      "foto": "🌭"
+    },
+    {
+      "id": 5,
+      "cat": "Porções",
+      "nome": "Batata Frita",
+      "desc": "Porção média, serve 2 pessoas",
+      "preco": 22,
+      "foto": "🍟"
+    },
+    {
+      "id": 6,
+      "cat": "Porções",
+      "nome": "Calabresa Acebolada",
+      "desc": "Calabresa fatiada com cebola e farofa",
+      "preco": 32,
+      "foto": "🍖"
+    },
+    {
+      "id": 7,
+      "cat": "Bebidas",
+      "nome": "Refrigerante Lata",
+      "desc": "350ml, escolha o sabor nas observações",
+      "preco": 6,
+      "foto": "🥤"
+    },
+    {
+      "id": 8,
+      "cat": "Bebidas",
+      "nome": "Suco Natural",
+      "desc": "Laranja, maracujá ou acerola, 400ml",
+      "preco": 9,
+      "foto": "🍹"
+    },
+    {
+      "id": 9,
+      "cat": "Bebidas",
+      "nome": "Água Mineral",
+      "desc": "500ml sem gás",
+      "preco": 3,
+      "foto": "💧"
+    },
+    {
+      "id": 10,
+      "cat": "Sobremesas",
+      "nome": "Pudim",
+      "desc": "Fatia caseira com calda de caramelo",
+      "preco": 8,
+      "foto": "🍮",
+      "esgotado": true
+    },
+    {
+      "id": 11,
+      "cat": "Sobremesas",
+      "nome": "Brownie",
+      "desc": "Com sorvete de creme",
+      "preco": 12,
+      "foto": "🍫"
+    }
+  ]
+}
