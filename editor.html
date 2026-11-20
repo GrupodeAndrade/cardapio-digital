@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Editor de Cardápio · GDA</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --card: #fff; --texto: #1d1d1f; --suave: #6b6b72; --borda: #dcdce2;
+    --cor: #1f6feb; --cor-txt: #fff; --erro: #c62828; --ok: #1a7f45; --chip: #eef0f4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #121316; --card: #1c1d22; --texto: #f1f1f3; --suave: #a0a0a9; --borda: #33343c; --cor: #4c8dff; --erro: #ff7b82; --ok: #4cc884; --chip: #2a2b32; color-scheme: dark; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--texto); }
+  header { background: var(--card); border-bottom: 1px solid var(--borda); padding: 12px 16px; position: sticky; top: 0; z-index: 10; }
+  header h1 { font-size: 17px; margin: 0 0 8px; }
+  .barra { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; max-width: 1200px; margin: 0 auto; padding: 16px; }
+  @media (min-width: 960px) { .layout { grid-template-columns: minmax(0, 1fr) 400px; } .prev { position: sticky; top: 92px; align-self: start; } }
+  section.card { background: var(--card); border: 1px solid var(--borda); border-radius: 14px; padding: 14px 16px 16px; margin-bottom: 14px; }
+  section.card h2 { font-size: 16px; margin: 0 0 10px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px 12px; }
+  label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; }
+  label.f small { font-weight: 400; color: var(--suave); }
+  input, select, textarea, button { font: inherit; color: inherit; }
+  input[type=text], input[type=time], select, textarea {
+    width: 100%; padding: 10px; border: 1px solid var(--borda); border-radius: 9px; background: var(--card); font-weight: 400;
+  }
+  input[type=color] { width: 100%; height: 42px; border: 1px solid var(--borda); border-radius: 9px; background: var(--card); padding: 3px; }
+  label.c { display: flex; align-items: center; gap: 8px; font-size: 14px; padding: 6px 0; }
+  label.c input { width: 18px; height: 18px; }
+  button { border: 1px solid var(--borda); background: var(--chip); border-radius: 9px; padding: 9px 13px; cursor: pointer; font-weight: 600; }
+  button.pri { background: var(--cor); border-color: var(--cor); color: var(--cor-txt); }
+  button.perigo { color: var(--erro); }
+  button.mini { padding: 6px 9px; font-size: 13px; }
+  .item { border: 1px solid var(--borda); border-radius: 12px; padding: 10px; margin-bottom: 10px; background: var(--bg); }
+  .item .acoes { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+  .linha-cat { display: flex; gap: 6px; margin-bottom: 8px; }
+  .linha-cat input { flex: 1; }
+  .dia { display: grid; grid-template-columns: 96px minmax(0, 1fr) minmax(0, 1fr); gap: 6px; align-items: center; margin-bottom: 6px; }
+  .dia input[type=time] { min-width: 0; padding: 9px 6px; }
+  .dia .fechado { grid-column: 2 / 4; color: var(--suave); font-size: 13px; }
+  .dica { color: var(--suave); font-size: 13px; margin: 4px 0 10px; }
+  .problemas { border: 1px solid var(--erro); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; color: var(--erro); font-size: 14px; }
+  .problemas ul { margin: 6px 0 0 18px; padding: 0; }
+  .ok-msg { color: var(--ok); font-weight: 600; font-size: 14px; }
+  iframe { width: 100%; height: 640px; border: 1px solid var(--borda); border-radius: 14px; background: #fff; }
+  textarea.json { font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace; min-height: 160px; }
+  details { margin-top: 10px; }
+  summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+  .passos { font-size: 14px; margin: 8px 0 0; padding-left: 20px; }
+  .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: #111; color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 50; }
+  .toast.on { opacity: 1; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Editor de Cardápio</h1>
+  <div class="barra">
+    <label class="f" style="min-width:180px;flex:1"><span>Cliente (nome do arquivo)</span>
+      <input type="text" id="slug" placeholder="ex.: padaria-do-ze" autocomplete="off" autocapitalize="off"></label>
+    <button id="b-carregar">Carregar</button>
+    <button id="b-novo">Novo cliente</button>
+    <button id="b-arquivo">Abrir arquivo…</button>
+    <input type="file" id="arquivo" accept=".json,application/json" hidden>
+  </div>
+</header>
+
+<main class="layout">
+  <div>
+    <div id="problemas"></div>
+    <div id="edit"></div>
+    <section class="card" id="salvar">
+      <h2>Salvar</h2>
+      <p class="dica">Depois de revisar, copie o arquivo e atualize no GitHub. Em seguida, clique em <b>Redeploy</b> no Coolify.</p>
+      <div class="barra">
+        <button class="pri" id="b-copiar">Copiar JSON</button>
+        <button id="b-baixar">Baixar .json</button>
+        <button id="b-gh-editar">Editar no GitHub</button>
+        <button id="b-gh-criar">Criar no GitHub</button>
+      </div>
+      <ol class="passos">
+        <li>Clique em <b>Editar no GitHub</b> (cliente que já existe) ou <b>Criar no GitHub</b> (cliente novo). O JSON é copiado automaticamente.</li>
+        <li>No GitHub, apague o conteúdo, cole o novo (Ctrl+A e Ctrl+V) e clique em <b>Commit changes</b>.</li>
+        <li>No Coolify, clique em <b>Redeploy</b>. Em 1 a 2 minutos o cardápio está atualizado.</li>
+      </ol>
+      <details>
+        <summary>Repositório do GitHub e JSON gerado</summary>
+        <label class="f" style="margin-top:8px"><span>Repositório (dono/nome)</span><input type="text" id="repo" autocomplete="off"></label>
+        <label class="f" style="margin-top:8px"><span>JSON gerado (somente leitura)</span><textarea class="json" id="saida" readonly></textarea></label>
+      </details>
+      <details>
+        <summary>Colar um JSON existente</summary>
+        <label class="f" style="margin-top:8px"><span>Cole aqui o conteúdo do arquivo</span><textarea class="json" id="colar"></textarea></label>
+        <div class="acoes" style="margin-top:8px"><button id="b-aplicar">Carregar este JSON</button></div>
+      </details>
+    </section>
+  </div>
+  <aside class="prev">
+    <section class="card" style="padding:10px">
+      <h2 style="margin-bottom:8px">Prévia</h2>
+      <iframe id="prev" title="Prévia do cardápio"></iframe>
+    </section>
+  </aside>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+  var DIAS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+  var $ = function (id) { return document.getElementById(id); };
+  var cfg = novo();
+  var timerSaida = null, timerPrev = null;
+
+  /* ---------- modelo ---------- */
+  function novo() {
+    return {
+      nome: "Nome do comércio", slogan: "Seu slogan aqui", logo: "🍽️", whatsapp: "55",
+      corPrincipal: "#e63946", moeda: "BRL",
+      entrega: { ativa: true, pedidoMinimo: 0, zonas: [{ nome: "Todos os bairros", taxa: 5, gratisAcimaDe: 0, aCombinar: false, descricao: "" }] },
+      retirada: { ativa: true },
+      pagamentos: ["Pix", "Dinheiro", "Cartão de crédito", "Cartão de débito"],
+      pixChave: "",
+      horarios: null,
+      aceitarPedidoFechado: true,
+      rodape: "Feito com ❤️ por GDA Sites",
+      categorias: ["Geral"],
+      produtos: []
+    };
+  }
+  function horariosPadrao() {
+    var h = {};
+    for (var d = 0; d < 7; d++) h[d] = ["08:00", "18:00"];
+    return h;
+  }
+  function normalizar(c) {
+    var b = novo();
+    var o = {};
+    Object.keys(b).forEach(function (k) { o[k] = c[k] !== undefined ? c[k] : b[k]; });
+    o.entrega = Object.assign({}, b.entrega, c.entrega || {});
+    if (!o.entrega.zonas || !o.entrega.zonas.length) {
+      o.entrega.zonas = [{ nome: "Entrega", taxa: o.entrega.taxa || 0, gratisAcimaDe: o.entrega.gratisAcimaDe || 0, aCombinar: false, descricao: "" }];
+    }
+    o.entrega.zonas = o.entrega.zonas.map(function (z) {
+      return { nome: z.nome || "", taxa: z.taxa || 0, gratisAcimaDe: z.gratisAcimaDe || 0, aCombinar: !!z.aCombinar, descricao: z.descricao || "" };
+    });
+    o.retirada = Object.assign({}, b.retirada, c.retirada || {});
+    o.pagamentos = Array.isArray(c.pagamentos) ? c.pagamentos.slice() : b.pagamentos;
+    o.produtos = (c.produtos || []).map(function (p, i) {
+      return { id: p.id || i + 1, cat: p.cat || "", nome: p.nome || "", desc: p.desc || "", preco: p.preco, foto: p.foto || "", esgotado: !!p.esgotado };
+    });
+    var cats = Array.isArray(c.categorias) ? c.categorias.slice() : [];
+    o.produtos.forEach(function (p) { if (p.cat && cats.indexOf(p.cat) < 0) cats.push(p.cat); });
+    o.categorias = cats.length ? cats : ["Geral"];
+    if (c.horarios) {
+      var h = horariosPadrao();
+      for (var d = 0; d < 7; d++) h[d] = c.horarios[d] ? c.horarios[d].slice(0, 2) : null;
+      o.horarios = h;
+    } else o.horarios = null;
+    return o;
+  }
+  function num(v) {
+    if (typeof v === "number") return v;
+    var s = String(v == null ? "" : v).trim().replace(",", ".");
+    return s === "" ? NaN : Number(s);
+  }
+  function limpo() {
+    var c = cfg, out = {};
+    out.nome = c.nome.trim();
+    out.slogan = c.slogan.trim();
+    out.logo = c.logo.trim() || "🍽️";
+    out.whatsapp = String(c.whatsapp).replace(/\D/g, "");
+    out.corPrincipal = c.corPrincipal;
+    out.moeda = "BRL";
+    out.entrega = {
+      ativa: !!c.entrega.ativa,
+      pedidoMinimo: num(c.entrega.pedidoMinimo) || 0,
+      zonas: c.entrega.zonas.map(function (z) {
+        var o = { nome: z.nome.trim() };
+        if (z.aCombinar) o.aCombinar = true;
+        else {
+          o.taxa = num(z.taxa) || 0;
+          var g = num(z.gratisAcimaDe) || 0;
+          if (g > 0) o.gratisAcimaDe = g;
+        }
+        if ((z.descricao || "").trim()) o.descricao = z.descricao.trim();
+        return o;
+      })
+    };
+    out.retirada = { ativa: !!c.retirada.ativa };
+    out.pagamentos = c.pagamentos.slice();
+    out.pixChave = c.pixChave.trim();
+    if (c.horarios) {
+      out.horarios = {};
+      for (var d = 0; d < 7; d++) out.horarios[d] = c.horarios[d] ? [c.horarios[d][0], c.horarios[d][1]] : null;
+    } else out.horarios = null;
+    out.aceitarPedidoFechado = !!c.aceitarPedidoFechado;
+    out.rodape = c.rodape;
+    out.categorias = c.categorias.map(function (x) { return x.trim(); });
+    out.produtos = c.produtos.map(function (p) {
+      var o = { id: p.id, cat: p.cat, nome: p.nome.trim(), desc: (p.desc || "").trim(), preco: num(p.preco), foto: (p.foto || "").trim() || "🍽️" };
+      if (p.esgotado) o.esgotado = true;
+      return o;
+    });
+    return out;
+  }
+  function problemas() {
+    var c = limpo(), p = [];
+    var slug = $("slug").value.trim();
+    if (!/^[a-z0-9-]+$/.test(slug)) p.push("O nome do cliente deve ter só letras minúsculas, números e hífen (ex.: padaria-do-ze).");
+    if (!c.nome) p.push("Informe o nome do comércio.");
+    if (!/^55\d{10,11}$/.test(c.whatsapp)) p.push("WhatsApp inválido: use 55 + DDD + número, só dígitos (ex.: 5571999999999).");
+    if (!c.categorias.length || c.categorias.some(function (x) { return !x; })) p.push("Há categoria sem nome.");
+    if (new Set(c.categorias).size !== c.categorias.length) p.push("Há categorias com o mesmo nome.");
+    if (!c.pagamentos.length) p.push("Informe ao menos uma forma de pagamento.");
+    c.entrega.zonas.forEach(function (z, i) {
+      if (!z.nome) p.push("Região de entrega " + (i + 1) + " sem nome.");
+    });
+    c.produtos.forEach(function (x, i) {
+      var r = "Produto " + (i + 1) + (x.nome ? " (" + x.nome + ")" : "");
+      if (!x.nome) p.push(r + ": falta o nome.");
+      if (!(x.preco >= 0)) p.push(r + ": preço inválido.");
+      if (c.categorias.indexOf(x.cat) < 0) p.push(r + ": escolha uma categoria.");
+    });
+    if (!c.produtos.length) p.push("Cadastre ao menos um produto.");
+    return p;
+  }
+
+  /* ---------- construção de elementos ---------- */
+  function h(tag, attrs) {
+    var e = document.createElement(tag);
+    Object.keys(attrs || {}).forEach(function (k) {
+      var v = attrs[k];
+      if (k === "class") e.className = v;
+      else if (k === "value") e.value = v;
+      else if (k === "checked") e.checked = !!v;
+      else if (k.slice(0, 2) === "on") e.addEventListener(k.slice(2), v);
+      else if (v === true) e.setAttribute(k, "");
+      else if (v !== false && v != null) e.setAttribute(k, v);
+    });
+    for (var i = 2; i < arguments.length; i++) {
+      [].concat(arguments[i]).forEach(function (c) {
+        if (c == null || c === false) return;
+        e.append(c instanceof Node ? c : document.createTextNode(c));
+      });
+    }
+    return e;
+  }
+  function campo(rotulo, get, set, o) {
+    o = o || {};
+    var el = o.area ? h("textarea", { rows: 2 }) : h("input", { type: o.type || "text", inputmode: o.mode || null, placeholder: o.ph || "", autocomplete: "off" });
+    el.value = get() == null ? "" : get();
+    el.addEventListener("input", function () { set(el.value); mudou(false); });
+    return h("label", { class: "f" }, h("span", {}, rotulo), el, o.dica ? h("small", {}, o.dica) : null);
+  }
+  function marca(rotulo, get, set, refazer) {
+    var el = h("input", { type: "checkbox", checked: !!get() });
+    el.addEventListener("change", function () { set(el.checked); mudou(!!refazer); });
+    return h("label", { class: "c" }, el, h("span", {}, rotulo));
+  }
+  function mover(arr, i, d) {
+    var j = i + d;
+    if (j < 0 || j >= arr.length) return;
+    var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+  }
+  function botao(txt, fn, cls) { return h("button", { type: "button", class: cls || "", onclick: fn }, txt); }
+
+  /* ---------- telas ---------- */
+  function secao(titulo, dica) {
+    var s = h("section", { class: "card" }, h("h2", {}, titulo));
+    if (dica) s.append(h("p", { class: "dica" }, dica));
+    return s;
+  }
+  function render() {
+    var raiz = $("edit");
+    raiz.innerHTML = "";
+
+    // 1. Dados
+    var s1 = secao("Dados do comércio");
+    s1.append(h("div", { class: "grid" },
+      campo("Nome", function () { return cfg.nome; }, function (v) { cfg.nome = v; }),
+      campo("Slogan", function () { return cfg.slogan; }, function (v) { cfg.slogan = v; }),
+      campo("Logo", function () { return cfg.logo; }, function (v) { cfg.logo = v; }, { dica: "Um emoji ou o endereço de uma imagem (ex.: fotos/logo.png)." }),
+      campo("WhatsApp", function () { return cfg.whatsapp; }, function (v) { cfg.whatsapp = v; }, { mode: "numeric", dica: "55 + DDD + número, só dígitos." }),
+      (function () {
+        var i = h("input", { type: "color", value: cfg.corPrincipal });
+        i.addEventListener("input", function () { cfg.corPrincipal = i.value; mudou(false); });
+        return h("label", { class: "f" }, h("span", {}, "Cor principal"), i);
+      })(),
+      campo("Chave Pix (opcional)", function () { return cfg.pixChave; }, function (v) { cfg.pixChave = v; }),
+      campo("Rodapé", function () { return cfg.rodape; }, function (v) { cfg.rodape = v; })
+    ));
+    raiz.append(s1);
+
+    // 2. Entrega e pagamento
+    var s2 = secao("Entrega e pagamento");
+    s2.append(
+      marca("Fazer entregas", function () { return cfg.entrega.ativa; }, function (v) { cfg.entrega.ativa = v; }),
+      marca("Aceitar retirada no local", function () { return cfg.retirada.ativa; }, function (v) { cfg.retirada.ativa = v; }),
+      marca("Aceitar pedidos fora do horário", function () { return cfg.aceitarPedidoFechado; }, function (v) { cfg.aceitarPedidoFechado = v; }),
+      h("div", { class: "grid" },
+        campo("Pedido mínimo para entrega (R$)", function () { return cfg.entrega.pedidoMinimo; }, function (v) { cfg.entrega.pedidoMinimo = v; }, { mode: "decimal", dica: "0 = sem mínimo." }),
+        campo("Formas de pagamento", function () { return cfg.pagamentos.join(", "); }, function (v) {
+          cfg.pagamentos = v.split(",").map(function (x) { return x.trim(); }).filter(Boolean);
+        }, { dica: "Separe por vírgula. Use \"Dinheiro\" para pedir o troco." })
+      ),
+      h("h2", { style: "margin-top:14px" }, "Regiões de entrega"),
+      h("p", { class: "dica" }, "O cliente escolhe a região no pedido. Marque \"Frete a combinar\" para regiões como a orla: o comércio informa o valor no WhatsApp.")
+    );
+    cfg.entrega.zonas.forEach(function (z, i) {
+      s2.append(h("div", { class: "item" },
+        h("div", { class: "grid" },
+          campo("Nome da região", function () { return z.nome; }, function (v) { z.nome = v; }),
+          z.aCombinar ? null : campo("Taxa (R$)", function () { return z.taxa; }, function (v) { z.taxa = v; }, { mode: "decimal" }),
+          z.aCombinar ? null : campo("Grátis acima de (R$)", function () { return z.gratisAcimaDe; }, function (v) { z.gratisAcimaDe = v; }, { mode: "decimal", dica: "0 = nunca é grátis." })
+        ),
+        marca("Frete a combinar", function () { return z.aCombinar; }, function (v) { z.aCombinar = v; }, true),
+        campo("Texto de ajuda (opcional)", function () { return z.descricao; }, function (v) { z.descricao = v; }),
+        h("div", { class: "acoes" },
+          botao("↑", function () { mover(cfg.entrega.zonas, i, -1); mudou(true); }, "mini"),
+          botao("↓", function () { mover(cfg.entrega.zonas, i, 1); mudou(true); }, "mini"),
+          cfg.entrega.zonas.length > 1 ? botao("Remover região", function () { cfg.entrega.zonas.splice(i, 1); mudou(true); }, "mini perigo") : null
+        )
+      ));
+    });
+    s2.append(botao("+ Adicionar região", function () {
+      cfg.entrega.zonas.push({ nome: "", taxa: 0, gratisAcimaDe: 0, aCombinar: false, descricao: "" });
+      mudou(true);
+    }));
+    raiz.append(s2);
+
+    // 3. Horários
+    var s3 = secao("Horário de funcionamento");
+    s3.append(marca("Mostrar \"Aberto agora / Fechado\" no cardápio", function () { return !!cfg.horarios; }, function (v) {
+      cfg.horarios = v ? horariosPadrao() : null;
+    }, true));
+    if (cfg.horarios) {
+      DIAS.forEach(function (nome, d) {
+        var f = cfg.horarios[d];
+        var linha = h("div", { class: "dia" }, marca(nome, function () { return !!cfg.horarios[d]; }, function (v) {
+          cfg.horarios[d] = v ? ["08:00", "18:00"] : null;
+        }, true));
+        if (f) {
+          var a = h("input", { type: "time", value: f[0] }), b = h("input", { type: "time", value: f[1] });
+          a.addEventListener("input", function () { cfg.horarios[d][0] = a.value; mudou(false); });
+          b.addEventListener("input", function () { cfg.horarios[d][1] = b.value; mudou(false); });
+          linha.append(a, b);
+        } else linha.append(h("span", { class: "fechado" }, "Fechado"));
+        s3.append(linha);
+      });
+    }
+    raiz.append(s3);
+
+    // 4. Categorias
+    var s4 = secao("Categorias");
+    cfg.categorias.forEach(function (nome, i) {
+      var inp = h("input", { type: "text", value: nome, autocomplete: "off" });
+      inp.addEventListener("input", function () {
+        var antigo = cfg.categorias[i];
+        cfg.categorias[i] = inp.value;
+        cfg.produtos.forEach(function (p) { if (p.cat === antigo) p.cat = inp.value; });
+        mudou(false);
+      });
+      inp.addEventListener("change", function () { render(); });
+      s4.append(h("div", { class: "linha-cat" }, inp,
+        botao("↑", function () { mover(cfg.categorias, i, -1); mudou(true); }, "mini"),
+        botao("↓", function () { mover(cfg.categorias, i, 1); mudou(true); }, "mini"),
+        cfg.categorias.length > 1 ? botao("✕", function () {
+          var usados = cfg.produtos.filter(function (p) { return p.cat === nome; }).length;
+          if (usados && !confirm(usados + " produto(s) usam \"" + nome + "\" e serão movidos para a primeira categoria. Continuar?")) return;
+          cfg.categorias.splice(i, 1);
+          cfg.produtos.forEach(function (p) { if (p.cat === nome) p.cat = cfg.categorias[0]; });
+          mudou(true);
+        }, "mini perigo") : null
+      ));
+    });
+    s4.append(botao("+ Adicionar categoria", function () { cfg.categorias.push("Nova categoria"); mudou(true); }));
+    raiz.append(s4);
+
+    // 5. Produtos
+    var s5 = secao("Produtos (" + cfg.produtos.length + ")", "Foto: um emoji ou o endereço de uma imagem (ex.: fotos/x-burger.jpg, com o arquivo enviado ao GitHub na pasta fotos).");
+    cfg.produtos.forEach(function (p, i) {
+      var sel = h("select", {});
+      cfg.categorias.forEach(function (c) {
+        var o = h("option", { value: c }, c || "(sem nome)");
+        if (c === p.cat) o.selected = true;
+        sel.append(o);
+      });
+      sel.addEventListener("change", function () { p.cat = sel.value; mudou(false); });
+      s5.append(h("div", { class: "item" },
+        h("div", { class: "grid" },
+          campo("Nome", function () { return p.nome; }, function (v) { p.nome = v; }),
+          campo("Preço (R$)", function () { return p.preco == null ? "" : p.preco; }, function (v) { p.preco = v; }, { mode: "decimal" }),
+          h("label", { class: "f" }, h("span", {}, "Categoria"), sel),
+          campo("Foto", function () { return p.foto; }, function (v) { p.foto = v; }, { ph: "🍔 ou fotos/x-burger.jpg" })
+        ),
+        campo("Descrição", function () { return p.desc; }, function (v) { p.desc = v; }, { area: true }),
+        h("div", { class: "acoes" },
+          marca("Esgotado", function () { return p.esgotado; }, function (v) { p.esgotado = v; }),
+          botao("↑", function () { mover(cfg.produtos, i, -1); mudou(true); }, "mini"),
+          botao("↓", function () { mover(cfg.produtos, i, 1); mudou(true); }, "mini"),
+          botao("Duplicar", function () {
+            var c = Object.assign({}, p, { id: proximoId(), nome: p.nome + " (cópia)" });
+            cfg.produtos.splice(i + 1, 0, c); mudou(true);
+          }, "mini"),
+          botao("Remover", function () {
+            if (confirm("Remover \"" + (p.nome || "produto sem nome") + "\"?")) { cfg.produtos.splice(i, 1); mudou(true); }
+          }, "mini perigo")
+        )
+      ));
+    });
+    s5.append(botao("+ Adicionar produto", function () {
+      cfg.produtos.push({ id: proximoId(), cat: cfg.categorias[0], nome: "", desc: "", preco: "", foto: "🍽️", esgotado: false });
+      mudou(true);
+    }, "pri"));
+    raiz.append(s5);
+  }
+  function proximoId() {
+    return cfg.produtos.reduce(function (m, p) { return Math.max(m, p.id || 0); }, 0) + 1;
+  }
+
+  /* ---------- atualização da saída e da prévia ---------- */
+  function mudou(refazer) {
+    if (refazer) render();
+    clearTimeout(timerSaida);
+    timerSaida = setTimeout(atualizarSaida, 150);
+    clearTimeout(timerPrev);
+    timerPrev = setTimeout(atualizarPrevia, 700);
+  }
+  function atualizarSaida() {
+    var p = problemas(), box = $("problemas");
+    box.innerHTML = "";
+    if (p.length) {
+      var ul = h("ul", {});
+      p.forEach(function (t) { ul.append(h("li", {}, t)); });
+      box.append(h("div", { class: "problemas" }, h("b", {}, "Corrija antes de salvar:"), ul));
+    }
+    $("saida").value = JSON.stringify(limpo(), null, 2) + "\n";
+  }
+  function atualizarPrevia() {
+    var f = $("prev");
+    f.onload = function () {
+      try { f.contentWindow.postMessage({ type: "cardapio-config", config: limpo() }, location.origin); } catch (e) {}
+    };
+    f.src = "index.html?preview=1&t=" + Date.now();
+  }
+  function aviso(txt) {
+    var t = $("toast");
+    t.textContent = txt;
+    t.classList.add("on");
+    clearTimeout(aviso.t);
+    aviso.t = setTimeout(function () { t.classList.remove("on"); }, 2600);
+  }
+
+  /* ---------- carregar e salvar ---------- */
+  function aplicar(json, slug) {
+    cfg = normalizar(json);
+    if (slug != null) $("slug").value = slug;
+    render();
+    mudou(false);
+    atualizarPrevia();
+  }
+  function slugAtual() { return $("slug").value.trim().toLowerCase().replace(/[^a-z0-9-]/g, ""); }
+  function carregar() {
+    var s = slugAtual();
+    if (!s) { aviso("Digite o nome do cliente."); return; }
+    fetch("clientes/" + s + ".json", { cache: "no-cache" })
+      .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+      .then(function (j) { aplicar(j, s); aviso("Cliente \"" + s + "\" carregado."); })
+      .catch(function () { aviso("Não encontrei clientes/" + s + ".json. Use \"Novo cliente\" para criar."); });
+  }
+  function copiar(texto) {
+    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(texto);
+    return new Promise(function (ok, erro) {
+      var t = $("saida"); t.removeAttribute("readonly"); t.select();
+      try { document.execCommand("copy") ? ok() : erro(); } catch (e) { erro(e); }
+      t.setAttribute("readonly", "");
+    });
+  }
+  function podeSalvar() {
+    var p = problemas();
+    if (p.length) { aviso("Corrija os avisos em vermelho antes de salvar."); window.scrollTo({ top: 0, behavior: "smooth" }); return false; }
+    return true;
+  }
+  function repo() { return $("repo").value.trim() || "GrupodeAndrade/cardapio-digital"; }
+  function guardarRepo() { try { localStorage.setItem("editor:repo", $("repo").value.trim()); } catch (e) {} }
+
+  $("b-carregar").addEventListener("click", carregar);
+  $("slug").addEventListener("keydown", function (e) { if (e.key === "Enter") carregar(); });
+  $("b-novo").addEventListener("click", function () {
+    var s = slugAtual();
+    if (!s) { aviso("Digite o nome do novo cliente (ex.: padaria-do-ze) e clique em Novo cliente."); $("slug").focus(); return; }
+    aplicar(novo(), s);
+    aviso("Cliente novo em branco. Preencha e salve.");
+  });
+  $("b-arquivo").addEventListener("click", function () { $("arquivo").click(); });
+  $("arquivo").addEventListener("change", function () {
+    var f = this.files[0]; if (!f) return;
+    var r = new FileReader();
+    r.onload = function () {
+      try { aplicar(JSON.parse(r.result), f.name.replace(/\.json$/i, "").toLowerCase().replace(/[^a-z0-9-]/g, "-")); aviso("Arquivo carregado."); }
+      catch (e) { aviso("Esse arquivo não é um JSON válido."); }
+    };
+    r.readAsText(f);
+  });
+  $("b-aplicar").addEventListener("click", function () {
+    try { aplicar(JSON.parse($("colar").value), null); aviso("JSON carregado."); }
+    catch (e) { aviso("JSON inválido: confira vírgulas e aspas."); }
+  });
+  $("b-copiar").addEventListener("click", function () {
+    if (!podeSalvar()) return;
+    copiar($("saida").value).then(function () { aviso("JSON copiado."); }, function () { aviso("Não consegui copiar; abra \"JSON gerado\" e copie manualmente."); });
+  });
+  $("b-baixar").addEventListener("click", function () {
+    if (!podeSalvar()) return;
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([$("saida").value], { type: "application/json" }));
+    a.download = slugAtual() + ".json";
+    document.body.append(a); a.click(); a.remove();
+  });
+  $("b-gh-editar").addEventListener("click", function () {
+    if (!podeSalvar()) return;
+    guardarRepo();
+    var url = "https://github.com/" + repo() + "/edit/main/clientes/" + slugAtual() + ".json";
+    copiar($("saida").value).then(function () { aviso("JSON copiado. Cole no GitHub (Ctrl+A, Ctrl+V)."); }, function () {});
+    window.open(url, "_blank", "noopener");
+  });
+  $("b-gh-criar").addEventListener("click", function () {
+    if (!podeSalvar()) return;
+    guardarRepo();
+    var base = "https://github.com/" + repo() + "/new/main/clientes?filename=" + encodeURIComponent(slugAtual() + ".json");
+    var comValor = base + "&value=" + encodeURIComponent($("saida").value);
+    copiar($("saida").value).then(function () { aviso("JSON copiado. Se o GitHub abrir vazio, cole (Ctrl+V)."); }, function () {});
+    window.open(comValor.length < 7000 ? comValor : base, "_blank", "noopener");
+  });
+
+  /* ---------- início ---------- */
+  try { $("repo").value = localStorage.getItem("editor:repo") || ""; } catch (e) {}
+  if (!$("repo").value) $("repo").value = "GrupodeAndrade/cardapio-digital";
+  var inicial = (new URLSearchParams(location.search).get("c") || "demo").toLowerCase().replace(/[^a-z0-9-]/g, "");
+  $("slug").value = inicial;
+  render();
+  carregar();
+})();
+</script>
+</body>
+</html>

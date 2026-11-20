@@ -448,7 +448,18 @@ function app(CONFIG) {
 }
 
 (function () {
-  var slug = (new URLSearchParams(location.search).get("c") || "demo").toLowerCase().replace(/[^a-z0-9-]/g, "");
+  var params = new URLSearchParams(location.search);
+  // modo prévia: o editor (editor.html) envia a configuração por postMessage
+  if (params.get("preview") === "1") {
+    window.addEventListener("message", function (e) {
+      if (e.origin !== location.origin || !e.data || e.data.type !== "cardapio-config") return;
+      try { app(e.data.config); } catch (err) {
+        document.body.innerHTML = '<p style="font:15px system-ui,sans-serif;text-align:center;padding:40px 20px;color:#b00">Prévia indisponível: revise os campos do editor.</p>';
+      }
+    }, { once: true });
+    return;
+  }
+  var slug = (params.get("c") || "demo").toLowerCase().replace(/[^a-z0-9-]/g, "");
   fetch("clientes/" + (slug || "demo") + ".json", { cache: "no-cache" })
     .then(function (r) { if (!r.ok) throw new Error("não encontrado"); return r.json(); })
     .then(app)

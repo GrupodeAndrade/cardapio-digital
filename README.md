@@ -6,6 +6,7 @@ Um único código serve vários clientes: cada cliente tem seu arquivo de config
 ## Estrutura
 
 - `index.html`: o cardápio (visual e lógica). Não precisa mexer para cada cliente.
+- `editor.html`: editor visual que gera o arquivo de cada cliente
 - `clientes/<nome>.json`: a configuração de cada cliente (nome, logo, cor, WhatsApp, produtos...)
 - `nginx.conf` e `Dockerfile`: servem o site (usados pelo Coolify)
 
@@ -17,7 +18,21 @@ Um único código serve vários clientes: cada cliente tem seu arquivo de config
 
 O nome do cliente no link só aceita letras minúsculas, números e hífen (ex.: `padaria-do-ze`).
 
-## Como criar um novo cliente
+## Editor visual (editor.html)
+
+Em vez de mexer no JSON à mão, abra `https://cardapio.gda.app.br/editor.html`:
+
+1. Digite o nome do cliente e clique em **Carregar** (ou **Novo cliente**, para começar em branco)
+2. Edite dados, entrega, horários, categorias e produtos; a prévia ao lado atualiza na hora
+3. Clique em **Editar no GitHub** (cliente existente) ou **Criar no GitHub** (cliente novo): o JSON é copiado
+4. No GitHub, apague o conteúdo, cole (Ctrl+A, Ctrl+V) e clique em **Commit changes**
+5. No Coolify, clique em **Redeploy**
+
+O editor avisa em vermelho se algo estiver errado (WhatsApp inválido, produto sem preço, categoria repetida)
+e só deixa salvar quando estiver tudo certo. Ele não grava nada sozinho: só gera o arquivo.
+A página não é indexada pelo Google (`noindex`), mas o endereço é público; ela não contém dados sensíveis.
+
+## Como criar um novo cliente (à mão)
 
 1. No GitHub, entre na pasta `clientes/`
 2. Abra `exemplo-padaria.json` → **copiar** (ou **Add file → Create new file**) e salve como `padaria-do-ze.json`
