@@ -1,51 +1,70 @@
-# Cardápio Digital (pedido por WhatsApp)
+# Cardápio Digital (pedido por WhatsApp), versão multi-cliente
 
-Site estático de uma página só. Não precisa de API nem banco de dados.
+Site estático. Não precisa de API nem banco de dados.
+Um único código serve vários clientes: cada cliente tem seu arquivo de configuração.
 
-## Arquivos
+## Estrutura
 
-- `index.html`: o cardápio inteiro (visual + configuração)
-- `Dockerfile`: serve o `index.html` com nginx (usado pelo Coolify)
+- `index.html`: o cardápio (visual e lógica). Não precisa mexer para cada cliente.
+- `clientes/<nome>.json`: a configuração de cada cliente (nome, logo, cor, WhatsApp, produtos...)
+- `nginx.conf` e `Dockerfile`: servem o site (usados pelo Coolify)
 
-## Como personalizar para um cliente
+## Links
 
-Abra o `index.html` e edite só o bloco `CONFIG` (perto da linha 165):
+- `https://cardapio.gda.app.br/` abre o cliente `demo`
+- `https://cardapio.gda.app.br/?c=exemplo-padaria` abre `clientes/exemplo-padaria.json`
+- Se o arquivo não existir, aparece "Cardápio não encontrado".
 
-- `nome`, `slogan`, `logo`
-- `whatsapp`: só números, com 55 + DDD + número (ex.: `5571999999999`)
-- `corPrincipal`
-- `entrega` (taxa, pedido mínimo, grátis acima de)
-- `pagamentos`, `pixChave`
-- `horarios`
-- `categorias` e `produtos`
+O nome do cliente no link só aceita letras minúsculas, números e hífen (ex.: `padaria-do-ze`).
 
-## Deploy no Coolify (VPS InterServer)
+## Como criar um novo cliente
 
-### 1. DNS
-No painel do seu domínio, crie um registro **A**:
+1. No GitHub, entre na pasta `clientes/`
+2. Abra `exemplo-padaria.json` → **copiar** (ou **Add file → Create new file**) e salve como `padaria-do-ze.json`
+3. Edite os campos do cliente:
+   - `nome`, `slogan`, `logo` (emoji ou endereço de imagem)
+   - `whatsapp`: só números, com 55 + DDD + número
+   - `corPrincipal`: cor em hexadecimal (ex.: `#8d5524`)
+   - `entrega`, `pagamentos`, `pixChave`, `horarios`
+   - `categorias` e `produtos` (cada produto precisa de um `id` único dentro do cliente)
+4. **Commit changes**
+5. No Coolify, clique em **Redeploy**
+6. Envie ao cliente o link `https://cardapio.gda.app.br/?c=padaria-do-ze`
 
-- Nome: `cardapio` (vira `cardapio.seudominio.com.br`)
-- Valor: IP da sua VPS
+Atenção: o JSON é rigoroso. Use aspas duplas, vírgula entre itens e **sem vírgula depois do último item**.
+Se o cardápio sumir, o erro mais provável é uma vírgula ou aspa faltando; valide em jsonlint.com.
 
-### 2. GitHub
-Crie um repositório (ex.: `cardapio-digital`) e envie estes arquivos
-(`index.html`, `Dockerfile`, `README.md`).
+## Frete por região
 
-### 3. Coolify
-1. Projects → seu projeto → **+ New Resource**
-2. Escolha **Public Repository** (ou Private, se o repositório for privado)
-3. Cole a URL do repositório, branch `main`
-4. Build Pack: **Dockerfile**
-5. Em **Domains**, informe `https://cardapio.seudominio.com.br`
-6. Porta exposta: `80`
-7. Clique em **Deploy**
+No arquivo do cliente, o frete é configurado em `entrega.zonas`. O cliente escolhe a região no pedido:
 
-O Coolify gera o certificado SSL (Let's Encrypt) sozinho quando o DNS já aponta para a VPS.
+```json
+"entrega": {
+  "ativa": true,
+  "pedidoMinimo": 15,
+  "zonas": [
+    { "nome": "Bairros comuns", "taxa": 5, "gratisAcimaDe": 60 },
+    { "nome": "Orla", "aCombinar": true, "descricao": "Frete calculado pelo comércio e informado no WhatsApp." }
+  ]
+}
+```
 
-### 4. Atualizações
-Edite o `index.html`, faça commit no GitHub e o Coolify faz o redeploy
-(ative **Auto Deploy** / webhook, ou clique em Deploy manualmente).
+- `taxa`: valor fixo da região (`0` = grátis)
+- `gratisAcimaDe`: pedido a partir do qual a taxa zera (`0` ou omitir = desativado)
+- `aCombinar: true`: o frete não entra no total; a mensagem do WhatsApp avisa "frete a combinar" e o comércio informa o valor (útil para a orla, tipo app de corrida)
+- `descricao`: texto de ajuda abaixo da lista (opcional)
+- Com uma região só, a lista não aparece para o cliente.
+- O formato antigo (`taxa` e `gratisAcimaDe` direto em `entrega`) continua funcionando.
 
-## Um site por cliente
-Para cada cliente, duplique o repositório (ou uma pasta), troque o bloco `CONFIG`
-e crie um novo recurso no Coolify com o subdomínio dele.
+## Deploy no Coolify
+
+1. Novo recurso → **Public Repository** → URL do repositório
+2. Build Pack: **Dockerfile**, porta `80`
+3. Domínio: `https://cardapio.gda.app.br`
+4. **Deploy**
+
+## Próximos passos (segunda versão)
+
+Hoje cada arquivo `clientes/<nome>.json` é a configuração de um cliente. Quando existir o painel
+Super Admin do GDA Soluções, esses mesmos dados passam a vir do banco de dados, e o dono do
+comércio edita preço e produto sozinho, sem GitHub e sem redeploy.

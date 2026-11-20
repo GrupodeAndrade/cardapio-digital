@@ -85,6 +85,8 @@
   .btn-enviar { width: 100%; margin-top: 10px; background: var(--verde); color: #fff; border: 0; border-radius: 12px; padding: 15px; font-weight: 700; font-size: 16px; }
   .btn-limpar { width: 100%; margin-top: 8px; background: transparent; color: var(--suave); border: 0; padding: 8px; font-size: 13px; text-decoration: underline; }
 
+  .dica { color: var(--suave); font-size: 12px; margin-top: 5px; }
+
   footer { text-align: center; color: var(--suave); font-size: 12px; padding: 24px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px)); }
   footer a { color: inherit; }
   [hidden] { display: none !important; }
@@ -137,6 +139,11 @@
     </div>
 
     <div id="bloco-endereco">
+      <div id="bloco-zona">
+        <label for="cli-zona">Região de entrega</label>
+        <select class="campo" id="cli-zona"></select>
+        <div class="dica" id="zona-dica"></div>
+      </div>
       <label for="cli-end">Endereço completo</label>
       <input class="campo" id="cli-end" autocomplete="street-address" placeholder="Rua, número, bairro, referência">
     </div>
@@ -160,63 +167,10 @@
 
 <script>
 /* =====================================================================
-   CONFIGURAÇÃO  —  é só esta parte que você edita para cada cliente
+   Cada cliente tem seu arquivo em clientes/<nome>.json
+   Link do cliente: seusite.com.br/?c=<nome>   (sem ?c= abre o "demo")
    ===================================================================== */
-const CONFIG = {
-  nome: "Lanchonete Rafa Lanches",
-  slogan: "Lanches, almoço e bebidas geladas",
-  logo: "🍔",                    // um emoji OU o endereço de uma imagem (ex.: "logo.png")
-  whatsapp: "5571982674990",     // só números, com 55 + DDD + número
-  corPrincipal: "#e63946",
-  moeda: "BRL",
-
-  entrega: {
-    ativa: true,
-    taxa: 7.00,                  // 0 para entrega grátis
-    pedidoMinimo: 15.00,         // 0 para sem mínimo
-    gratisAcimaDe: 60.00         // 0 para desativar
-  },
-  retirada: { ativa: true },
-
-  pagamentos: ["Pix", "Dinheiro", "Cartão de crédito", "Cartão de débito"],
-  pixChave: "",                  // opcional: chave Pix mostrada no pedido
-
-  /* Horário de funcionamento. 0=domingo ... 6=sábado. Use null para fechado no dia.
-     Deixe "horarios: null" para não mostrar aberto/fechado. */
-  horarios: {
-    0: ["18:00", "23:00"],
-    1: null,
-    2: ["18:00", "23:00"],
-    3: ["18:00", "23:00"],
-    4: ["18:00", "23:00"],
-    5: ["18:00", "23:59"],
-    6: ["18:00", "23:59"]
-  },
-  aceitarPedidoFechado: true,    // false bloqueia o envio fora do horário
-
-  rodape: "Feito com ❤️ por GDA Sites",
-
-  categorias: ["Lanches", "Porções", "Bebidas", "Almoço", "Sobremesas"],
-
-  /* foto: emoji OU endereço de imagem. esgotado: true tira o botão de adicionar. */
-  produtos: [
-    { id: 1,  cat: "Lanches",    nome: "X-Burger",        desc: "Pão, hambúrguer 120g, queijo e salada",           preco: 18.00, foto: "🍔" },
-    { id: 2,  cat: "Almoço",    nome: "Lasanha",         desc: "Lasanha com bastante molho de carne ou frango",    preco: 24.00, foto: "🥓" },
-    { id: 3,  cat: "Lanches",    nome: "X-Tudo",          desc: "Hambúrguer, ovo, presunto, queijo, bacon e salada", preco: 29.00, foto: "🍔" },
-    { id: 4,  cat: "Lanches",    nome: "Hot Dog Completo", desc: "Salsicha, purê, milho, batata palha e molho",     preco: 14.00, foto: "🌭" },
-    { id: 5,  cat: "Porções",    nome: "Batata Frita",    desc: "Porção média, serve 2 pessoas",                    preco: 22.00, foto: "🍟" },
-    { id: 6,  cat: "Porções",    nome: "Calabresa Acebolada", desc: "Calabresa fatiada com cebola e farofa",        preco: 32.00, foto: "🍖" },
-    { id: 7,  cat: "Bebidas",    nome: "Refrigerante Lata", desc: "350ml, escolha o sabor nas observações",         preco: 6.00,  foto: "🥤" },
-    { id: 8,  cat: "Bebidas",    nome: "Suco Natural",    desc: "Laranja, maracujá ou acerola, 400ml",              preco: 9.00,  foto: "🍹" },
-    { id: 9,  cat: "Bebidas",    nome: "Água Mineral",    desc: "500ml sem gás",                                    preco: 3.00,  foto: "💧" },
-    { id: 10, cat: "Sobremesas", nome: "Pudim",           desc: "Fatia caseira com calda de caramelo",              preco: 8.00,  foto: "🍮", esgotado: true },
-    { id: 11, cat: "Sobremesas", nome: "Brownie",         desc: "Com sorvete de creme",                             preco: 12.00, foto: "🍫" }
-  ]
-};
-/* ===================== FIM DA CONFIGURAÇÃO ===================== */
-
-
-(function () {
+function app(CONFIG) {
   "use strict";
 
   var $ = function (id) { return document.getElementById(id); };
@@ -286,11 +240,27 @@ const CONFIG = {
     var sel = document.querySelector('input[name="entrega"]:checked');
     return sel ? sel.value : "entrega";
   }
+  /* Regiões de entrega: usa CONFIG.entrega.zonas. Se não existir (formato antigo),
+     cria uma região única com taxa / gratisAcimaDe. */
+  function zonas() {
+    var e = CONFIG.entrega;
+    if (e.zonas && e.zonas.length) return e.zonas;
+    return [{ nome: "Entrega", taxa: e.taxa || 0, gratisAcimaDe: e.gratisAcimaDe || 0 }];
+  }
+  function zonaAtual() {
+    var z = zonas(), s = $("cli-zona");
+    return z[s && s.selectedIndex >= 0 ? s.selectedIndex : 0];
+  }
+  function freteACombinar() {
+    return modoEntrega() === "entrega" && !!CONFIG.entrega.ativa && !!zonaAtual().aCombinar;
+  }
   function taxaAtual() {
     var e = CONFIG.entrega;
     if (modoEntrega() !== "entrega" || !e.ativa) return 0;
-    if (e.gratisAcimaDe > 0 && subtotal() >= e.gratisAcimaDe) return 0;
-    return e.taxa || 0;
+    var z = zonaAtual();
+    if (z.aCombinar) return 0;
+    if (z.gratisAcimaDe > 0 && subtotal() >= z.gratisAcimaDe) return 0;
+    return z.taxa || 0;
   }
 
   /* ---------- catálogo ---------- */
@@ -354,8 +324,9 @@ const CONFIG = {
     var sub = subtotal(), taxa = taxaAtual();
     $("t-sub").textContent = brl(sub);
     $("linha-taxa").hidden = modoEntrega() !== "entrega" || !CONFIG.entrega.ativa;
-    $("t-taxa").textContent = taxa > 0 ? brl(taxa) : "Grátis";
-    $("t-total").textContent = brl(sub + taxa);
+    var comb = freteACombinar();
+    $("t-taxa").textContent = comb ? "A combinar" : (taxa > 0 ? brl(taxa) : "Grátis");
+    $("t-total").textContent = brl(sub + taxa) + (comb ? " + frete" : "");
   }
   function abrirCarrinho() { desenharCarrinho(); $("erro").textContent = ""; $("fundo").classList.add("aberto"); }
   function fecharCarrinho() { $("fundo").classList.remove("aberto"); }
@@ -363,6 +334,8 @@ const CONFIG = {
   function ajustarFormulario() {
     var entrega = modoEntrega() === "entrega";
     $("bloco-endereco").hidden = !entrega;
+    $("bloco-zona").hidden = zonas().length < 2;
+    $("zona-dica").textContent = zonaAtual().descricao || "";
     $("bloco-troco").hidden = $("cli-pag").value !== "Dinheiro";
     desenharCarrinho();
   }
@@ -376,14 +349,16 @@ const CONFIG = {
     L.push("");
     L.push("*Cliente:* " + $("cli-nome").value.trim());
     L.push("*Recebimento:* " + (entrega ? "Entrega" : "Retirada no local"));
+    if (entrega && zonas().length > 1) L.push("*Região:* " + zonaAtual().nome);
     if (entrega) L.push("*Endereço:* " + $("cli-end").value.trim());
     L.push("");
     L.push("*Itens:*");
     itens.forEach(function (i) { L.push(i.q + "x " + i.p.nome + " — " + brl(i.p.preco * i.q)); });
     L.push("");
     L.push("Subtotal: " + brl(sub));
-    if (entrega) L.push("Taxa de entrega: " + (taxa > 0 ? brl(taxa) : "Grátis"));
-    L.push("*Total: " + brl(total) + "*");
+    var comb = freteACombinar();
+    if (entrega) L.push("Taxa de entrega: " + (comb ? "a combinar" : (taxa > 0 ? brl(taxa) : "Grátis")));
+    L.push("*Total: " + brl(total) + (comb ? " + frete a combinar" : "") + "*");
     L.push("");
     var pag = $("cli-pag").value;
     L.push("*Pagamento:* " + pag);
@@ -429,6 +404,12 @@ const CONFIG = {
       opc.forEach(function (o) { o.checked = o.value === forcado; });
     }
 
+    // regiões de entrega
+    $("cli-zona").innerHTML = zonas().map(function (z) {
+      var t = z.aCombinar ? "frete a combinar" : (z.taxa > 0 ? brl(z.taxa) : "grátis");
+      return "<option>" + esc(z.nome + " — " + t) + "</option>";
+    }).join("");
+
     // pagamentos
     $("cli-pag").innerHTML = CONFIG.pagamentos.map(function (p) { return "<option>" + esc(p) + "</option>"; }).join("");
 
@@ -458,11 +439,22 @@ const CONFIG = {
     document.addEventListener("keydown", function (e) { if (e.key === "Escape") fecharCarrinho(); });
     $("opc-entrega").addEventListener("change", ajustarFormulario);
     $("cli-pag").addEventListener("change", ajustarFormulario);
+    $("cli-zona").addEventListener("change", ajustarFormulario);
     $("enviar").addEventListener("click", enviar);
     $("limpar").addEventListener("click", function () { carrinho = {}; salvar(); desenharLista(); atualizarBarra(); fecharCarrinho(); });
   }
 
   iniciar();
+}
+
+(function () {
+  var slug = (new URLSearchParams(location.search).get("c") || "demo").toLowerCase().replace(/[^a-z0-9-]/g, "");
+  fetch("clientes/" + (slug || "demo") + ".json", { cache: "no-cache" })
+    .then(function (r) { if (!r.ok) throw new Error("não encontrado"); return r.json(); })
+    .then(app)
+    .catch(function () {
+      document.body.innerHTML = '<p style="font:16px system-ui,sans-serif;text-align:center;padding:60px 20px;color:#555">Cardápio não encontrado.</p>';
+    });
 })();
 </script>
 
